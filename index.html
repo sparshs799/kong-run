@@ -275,87 +275,161 @@ monkeyGroup.position.set(MONKEY_X, 0, 0);
 monkeyGroup.rotation.y = Math.PI/2; // face +X (toward obstacles)
 scene.add(monkeyGroup);
 
-const bodyMat  = new THREE.MeshPhongMaterial({color:0xb07040, shininess:55, specular:0x441a00});
-const faceMat  = new THREE.MeshPhongMaterial({color:0xd09060, shininess:22, specular:0x220800});
-const bellyMat = new THREE.MeshPhongMaterial({color:0xd8a070, shininess:14});
-const browMat2 = new THREE.MeshPhongMaterial({color:0x6a3010});
-const eyeMatM  = new THREE.MeshBasicMaterial({color:0x120800});
+const bodyMat  = new THREE.MeshPhongMaterial({color:0x9a5528, shininess:70, specular:0x4a2000});
+const faceMat  = new THREE.MeshPhongMaterial({color:0xeaac78, shininess:18, specular:0x1a0800});
+const bellyMat = new THREE.MeshPhongMaterial({color:0xdca068, shininess:12});
+const browMat2 = new THREE.MeshPhongMaterial({color:0x4a2008, shininess:5});
+const eyeIrisM = new THREE.MeshBasicMaterial({color:0x7c3c08});
+const eyeWhiteM= new THREE.MeshBasicMaterial({color:0xf5ead8});
+const eyeMatM  = new THREE.MeshBasicMaterial({color:0x0e0400});
 const eyeShineM= new THREE.MeshBasicMaterial({color:0xffffff});
+const nosM     = new THREE.MeshBasicMaterial({color:0x1a0800});
+const nailM    = new THREE.MeshPhongMaterial({color:0x7a4018, shininess:25});
 
-// Body (barrel chest sphere)
-const mBody = new THREE.Mesh(new THREE.SphereGeometry(0.60,14,14), bodyMat);
-mBody.scale.set(1.12,1.0,0.82); mBody.position.y=1.70; mBody.castShadow=true;
+// ── HIP BASE ──
+const mHip = new THREE.Mesh(new THREE.SphereGeometry(0.50,12,10), bodyMat);
+mHip.scale.set(1.10,0.70,0.80); mHip.position.y=1.28; monkeyGroup.add(mHip);
+
+// ── BARREL CHEST ──
+const mBody = new THREE.Mesh(new THREE.SphereGeometry(0.64,16,14), bodyMat);
+mBody.scale.set(1.32,1.08,0.86); mBody.position.y=1.70; mBody.castShadow=true;
 monkeyGroup.add(mBody);
 
-// Belly highlight
-const mBelly = new THREE.Mesh(new THREE.SphereGeometry(0.36,10,10), bellyMat);
-mBelly.scale.set(0.85,0.80,0.44); mBelly.position.set(0,1.68,0.36);
+// Large belly patch
+const mBelly = new THREE.Mesh(new THREE.SphereGeometry(0.42,12,10), bellyMat);
+mBelly.scale.set(0.80,1.08,0.38); mBelly.position.set(0,1.66,0.42);
 monkeyGroup.add(mBelly);
 
-// Head
-const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.50,14,14), bodyMat);
-mHead.position.y=2.65; mHead.castShadow=true;
+// Upper chest highlight
+const mChest = new THREE.Mesh(new THREE.SphereGeometry(0.26,10,8), faceMat);
+mChest.scale.set(0.94,0.64,0.38); mChest.position.set(0,2.02,0.46);
+monkeyGroup.add(mChest);
+
+// Shoulder muscle bumps
+const mShBL = new THREE.Mesh(new THREE.SphereGeometry(0.30,10,9), bodyMat);
+mShBL.scale.set(0.82,0.76,0.78); mShBL.position.set(-0.74,2.08,0); monkeyGroup.add(mShBL);
+const mShBR = mShBL.clone(); mShBR.position.x=0.74; monkeyGroup.add(mShBR);
+
+// Neck
+const mNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.28,0.28,9), bodyMat);
+mNeck.position.set(0,2.20,0.04); monkeyGroup.add(mNeck);
+
+// ── HEAD ──
+const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.52,16,14), bodyMat);
+mHead.scale.set(1.04,0.97,0.95); mHead.position.y=2.65; mHead.castShadow=true;
 monkeyGroup.add(mHead);
 
-// Snout
-const mSnout = new THREE.Mesh(new THREE.SphereGeometry(0.27,10,10), faceMat);
-mSnout.scale.set(1.1,0.72,0.88); mSnout.position.set(0,2.54,0.38);
-monkeyGroup.add(mSnout);
+// Face plate (big lighter area)
+const mFace = new THREE.Mesh(new THREE.SphereGeometry(0.40,12,10), faceMat);
+mFace.scale.set(0.88,0.98,0.46); mFace.position.set(0,2.60,0.34); monkeyGroup.add(mFace);
 
-// Brow ridge
-const mBrow = new THREE.Mesh(new THREE.BoxGeometry(0.54,0.09,0.12), browMat2);
+// Snout — wide flat ape snout
+const mSnout = new THREE.Mesh(new THREE.SphereGeometry(0.27,12,10), faceMat);
+mSnout.scale.set(1.30,0.65,0.88); mSnout.position.set(0,2.48,0.44); monkeyGroup.add(mSnout);
+
+// Upper lip ridge
+const mLipR = new THREE.Mesh(new THREE.SphereGeometry(0.13,8,6), faceMat);
+mLipR.scale.set(1.85,0.48,0.72); mLipR.position.set(0,2.42,0.48); monkeyGroup.add(mLipR);
+
+// Nostrils
+const mNosL = new THREE.Mesh(new THREE.SphereGeometry(0.055,6,5), nosM);
+mNosL.position.set(-0.086,2.51,0.53); monkeyGroup.add(mNosL);
+const mNosR = mNosL.clone(); mNosR.position.x=0.086; monkeyGroup.add(mNosR);
+
+// Brow ridge (single piece — kept for animation reset)
+const mBrow = new THREE.Mesh(new THREE.BoxGeometry(0.62,0.11,0.14), browMat2);
 mBrow.position.set(0,2.84,0.42); monkeyGroup.add(mBrow);
+// Angled inner brow details
+const mBrowIL = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.09,0.12), browMat2);
+mBrowIL.position.set(-0.13,2.86,0.44); mBrowIL.rotation.z=0.24; monkeyGroup.add(mBrowIL);
+const mBrowIR = mBrowIL.clone(); mBrowIR.position.x=0.13; mBrowIR.rotation.z=-0.24; monkeyGroup.add(mBrowIR);
 
-// Eyes + shines
-const mEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.09,7,7), eyeMatM);
-mEyeL.position.set(-0.17,2.72,0.42); monkeyGroup.add(mEyeL);
-const mEyeR = mEyeL.clone(); mEyeR.position.x=0.17; monkeyGroup.add(mEyeR);
-const mShL = new THREE.Mesh(new THREE.SphereGeometry(0.03,5,5), eyeShineM);
-mShL.position.set(-0.15,2.74,0.50); monkeyGroup.add(mShL);
-const mShR = mShL.clone(); mShR.position.x=0.15; monkeyGroup.add(mShR);
+// Eyes — white sclera + amber iris + dark pupil + shine
+[-0.192,0.192].forEach(x=>{
+  const sc=new THREE.Mesh(new THREE.SphereGeometry(0.115,9,8),eyeWhiteM);
+  sc.position.set(x,2.70,0.43); monkeyGroup.add(sc);
+  const ir=new THREE.Mesh(new THREE.SphereGeometry(0.088,8,7),eyeIrisM);
+  ir.position.set(x,2.70,0.50); monkeyGroup.add(ir);
+});
+const mEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.060,7,6), eyeMatM);
+mEyeL.position.set(-0.192,2.705,0.53); monkeyGroup.add(mEyeL);
+const mEyeR = mEyeL.clone(); mEyeR.position.x=0.192; monkeyGroup.add(mEyeR);
+const mShL = new THREE.Mesh(new THREE.SphereGeometry(0.025,5,5), eyeShineM);
+mShL.position.set(-0.168,2.724,0.56); monkeyGroup.add(mShL);
+const mShR = mShL.clone(); mShR.position.x=0.168; monkeyGroup.add(mShR);
 
-// Ears
-const mEarL = new THREE.Mesh(new THREE.SphereGeometry(0.17,8,8), bodyMat);
-mEarL.position.set(-0.48,2.68,0); monkeyGroup.add(mEarL);
-const mEarR = mEarL.clone(); mEarR.position.x=0.48; monkeyGroup.add(mEarR);
-const mIEL = new THREE.Mesh(new THREE.SphereGeometry(0.09,6,6), faceMat);
-mIEL.position.set(-0.54,2.68,0.05); monkeyGroup.add(mIEL);
+// Ears (rounder, with inner cup)
+const mEarL = new THREE.Mesh(new THREE.SphereGeometry(0.20,10,9), bodyMat);
+mEarL.scale.set(0.80,1.02,0.46); mEarL.position.set(-0.51,2.68,-0.04); monkeyGroup.add(mEarL);
+const mEarR = mEarL.clone(); mEarR.position.x=0.51; monkeyGroup.add(mEarR);
+const mIEL = new THREE.Mesh(new THREE.SphereGeometry(0.12,8,7), faceMat);
+mIEL.scale.set(0.72,0.88,0.42); mIEL.position.set(-0.54,2.68,0.02); monkeyGroup.add(mIEL);
 const mIER = mIEL.clone(); mIER.position.x=0.54; monkeyGroup.add(mIER);
 
-// Arms (long primate)
-const mLArm = new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.14,1.60,8), bodyMat);
-mLArm.position.set(-0.70,1.70,0); mLArm.rotation.z=0.28; mLArm.castShadow=true;
+// Skull fur tuft
+const mTuft = new THREE.Mesh(new THREE.ConeGeometry(0.19,0.28,5), browMat2);
+mTuft.position.set(0,3.14,0); monkeyGroup.add(mTuft);
+
+// ── ARMS (long powerful primate) ──
+const mLArm = new THREE.Mesh(new THREE.CylinderGeometry(0.195,0.155,1.92,9), bodyMat);
+mLArm.position.set(-0.78,1.70,0); mLArm.rotation.z=0.30; mLArm.castShadow=true;
 monkeyGroup.add(mLArm);
-const mRArm = mLArm.clone(); mRArm.position.x=0.70; mRArm.rotation.z=-0.28;
+const mRArm = mLArm.clone(); mRArm.position.x=0.78; mRArm.rotation.z=-0.30;
 monkeyGroup.add(mRArm);
 
-// Hands
-const mLHand = new THREE.Mesh(new THREE.SphereGeometry(0.20,8,8), bodyMat);
-mLHand.position.set(-1.02,1.02,0); monkeyGroup.add(mLHand);
-const mRHand = mLHand.clone(); mRHand.position.x=1.02; monkeyGroup.add(mRHand);
+// Elbow bumps
+const mElbL = new THREE.Mesh(new THREE.SphereGeometry(0.160,8,7), bodyMat);
+mElbL.position.set(-1.06,1.34,0); monkeyGroup.add(mElbL);
+const mElbR = mElbL.clone(); mElbR.position.x=1.06; monkeyGroup.add(mElbR);
 
-// Legs
-const mLLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.18,1.02,8), bodyMat);
-mLLeg.position.set(-0.28,0.92,0); mLLeg.rotation.z=0.06; mLLeg.castShadow=true;
+// Fists — big oval hero hands
+const mLHand = new THREE.Mesh(new THREE.SphereGeometry(0.235,10,9), bodyMat);
+mLHand.scale.set(1.38,0.86,1.08); mLHand.position.set(-1.22,0.94,0.04);
+monkeyGroup.add(mLHand);
+const mRHand = mLHand.clone(); mRHand.position.x=1.22; monkeyGroup.add(mRHand);
+
+// Knuckle nubs (3 per fist)
+[-0.08,0,0.08].forEach(dz=>{
+  const kL=new THREE.Mesh(new THREE.SphereGeometry(0.050,5,4),nailM);
+  kL.position.set(-1.22,0.90,0.20+dz); monkeyGroup.add(kL);
+  const kR=kL.clone(); kR.position.x=1.22; monkeyGroup.add(kR);
+});
+
+// ── LEGS (stocky and powerful) ──
+const mLLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.240,0.188,1.06,9), bodyMat);
+mLLeg.position.set(-0.30,0.92,0); mLLeg.rotation.z=0.06; mLLeg.castShadow=true;
 monkeyGroup.add(mLLeg);
-const mRLeg = mLLeg.clone(); mRLeg.position.x=0.28; mRLeg.rotation.z=-0.06;
+const mRLeg = mLLeg.clone(); mRLeg.position.x=0.30; mRLeg.rotation.z=-0.06;
 monkeyGroup.add(mRLeg);
 
-// Feet
-const mFootL = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8), bodyMat);
-mFootL.scale.set(1.15,0.50,1.45); mFootL.position.set(-0.28,0.40,0.10);
-monkeyGroup.add(mFootL);
-const mFootR = mFootL.clone(); mFootR.position.x=0.28; monkeyGroup.add(mFootR);
+// Knee caps
+const mKneeL = new THREE.Mesh(new THREE.SphereGeometry(0.190,8,7), bodyMat);
+mKneeL.position.set(-0.30,0.50,0.06); monkeyGroup.add(mKneeL);
+const mKneeR = mKneeL.clone(); mKneeR.position.x=0.30; monkeyGroup.add(mKneeR);
 
-// Tail
+// Feet (wide prehensile)
+const mFootL = new THREE.Mesh(new THREE.SphereGeometry(0.205,9,8), bodyMat);
+mFootL.scale.set(1.10,0.46,1.58); mFootL.position.set(-0.30,0.34,0.12);
+monkeyGroup.add(mFootL);
+const mFootR = mFootL.clone(); mFootR.position.x=0.30; monkeyGroup.add(mFootR);
+
+// Toe nubs (3 per foot)
+[-0.06,0.03,0.12].forEach(tz=>{
+  const tL=new THREE.Mesh(new THREE.SphereGeometry(0.055,5,4),bodyMat);
+  tL.position.set(-0.30,0.28,0.38+tz); monkeyGroup.add(tL);
+  const tR=tL.clone(); tR.position.x=0.30; monkeyGroup.add(tR);
+});
+
+// ── TAIL (long sweeping curl) ──
 const tailCurve = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(0.28,1.20,0),
-  new THREE.Vector3(0.60,1.10,0),
-  new THREE.Vector3(0.80,0.88,0),
-  new THREE.Vector3(0.76,0.58,0),
+  new THREE.Vector3(0.20,1.24,0),
+  new THREE.Vector3(0.50,1.12,0),
+  new THREE.Vector3(0.76,0.86,0),
+  new THREE.Vector3(0.88,0.52,0),
+  new THREE.Vector3(0.72,0.26,0),
 ]);
 const mTail = new THREE.Mesh(
-  new THREE.TubeGeometry(tailCurve,10,0.07,7,false), bodyMat
+  new THREE.TubeGeometry(tailCurve,14,0.082,8,false), bodyMat
 );
 monkeyGroup.add(mTail);
 
@@ -371,7 +445,7 @@ const punchMat = new THREE.MeshPhongMaterial({color:0xffe040,emissive:0xffaa00,e
 const punchMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,8), punchMat);
 punchMesh.position.set(1.35,2.0,0.2); punchGroup.add(punchMesh);
 
-const charMeshes=[mBody,mHead,mLArm,mRArm,mLLeg,mRLeg,mEarL,mEarR,mFootL,mFootR,mTail];
+const charMeshes=[mHip,mBody,mHead,mNeck,mShBL,mShBR,mLArm,mRArm,mElbL,mElbR,mLHand,mRHand,mLLeg,mRLeg,mKneeL,mKneeR,mEarL,mEarR,mFootL,mFootR,mTail];
 
 // Aura rings
 const auraGroup = new THREE.Group();
