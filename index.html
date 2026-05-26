@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>KONG RUN</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1f0d;overflow:hidden;font-family:'Arial Black',Arial,sans-serif;touch-action:none;}
+canvas{display:block;width:100vw;height:100vh;}
+#hud{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:10;padding:12px 18px;display:flex;justify-content:space-between;align-items:flex-start;}
+#banana-count{font-size:28px;color:#ffe040;text-shadow:0 2px 8px #000,0 0 16px #cc8800;}
+#form-name{font-size:12px;color:#ffe;letter-spacing:3px;text-transform:uppercase;text-shadow:0 2px 6px #000;margin-top:4px;}
+#distance-label{font-size:11px;color:#88cc88;letter-spacing:1px;text-shadow:0 1px 4px #000;margin-top:4px;}
+#hp-label{font-size:11px;color:#ff8060;letter-spacing:2px;margin-top:6px;text-shadow:0 1px 4px #000;}
+#hp-wrap{width:200px;height:20px;background:rgba(0,0,0,0.65);border-radius:10px;overflow:hidden;border:1px solid rgba(255,80,40,0.45);margin-top:3px;}
+#hp-bar{height:100%;background:linear-gradient(90deg,#e02020,#ff6020);border-radius:10px;transition:width 0.1s;}
+#fire-btn{position:fixed;bottom:70px;right:18px;width:78px;height:78px;border-radius:50%;background:rgba(255,80,0,0.22);border:3px solid rgba(255,130,40,0.70);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;pointer-events:all;z-index:15;user-select:none;transition:background 0.15s;}
+#fire-btn:active{background:rgba(255,80,0,0.50);}
+#fire-icon{font-size:32px;line-height:1;}
+#fire-cd{font-size:10px;color:#ffaa60;letter-spacing:1px;margin-top:2px;}
+#weapon-name{font-size:9px;color:rgba(255,180,80,0.7);letter-spacing:1px;margin-top:1px;}
+#boss-section{text-align:right;display:none;}
+#boss-label{font-size:11px;color:#ff6040;letter-spacing:3px;text-transform:uppercase;text-shadow:0 2px 6px #000;}
+#boss-hp-wrap{width:220px;height:16px;background:rgba(0,0,0,0.55);border-radius:8px;overflow:hidden;border:1px solid rgba(255,80,30,0.35);margin-top:5px;margin-left:auto;}
+#boss-hp-bar{height:100%;background:linear-gradient(90deg,#ff1515,#ff7010);border-radius:8px;transition:width 0.12s;}
+#msg-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:20;}
+#msg-title{font-size:52px;color:#ffe040;text-shadow:0 4px 20px #ff8000,0 0 60px #ff6000;opacity:0;transition:opacity 0.4s;font-weight:900;letter-spacing:5px;text-align:center;padding:0 20px;}
+#msg-sub{font-size:22px;color:#fff;text-shadow:0 2px 12px #000;opacity:0;transition:opacity 0.4s 0.25s;margin-top:14px;text-align:center;}
+#start-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:30;background:linear-gradient(180deg,#0a1e0a 0%,#162e16 100%);}
+#start-title{font-size:64px;color:#ffe040;text-shadow:0 4px 24px #ff8000,0 0 80px #ff4000;font-weight:900;letter-spacing:8px;animation:pulse 2s infinite;}
+#start-subtitle{font-size:15px;color:#aaddaa;letter-spacing:4px;margin-top:10px;text-transform:uppercase;}
+#start-hint{font-size:15px;color:rgba(255,255,200,0.65);letter-spacing:3px;margin-top:52px;animation:blink 1.4s infinite;}
+#start-forms{display:flex;gap:12px;margin-top:28px;justify-content:center;align-items:center;}
+.form-pip{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);}
+#controls-hint{font-size:11px;color:rgba(200,255,200,0.4);letter-spacing:2px;margin-top:20px;}
+@keyframes pulse{0%,100%{text-shadow:0 4px 24px #ff8000,0 0 80px #ff4000;}50%{text-shadow:0 4px 40px #ffaa00,0 0 130px #ff8000;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.25;}}
+#tap-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);font-size:12px;color:rgba(255,255,255,0.38);letter-spacing:2px;pointer-events:none;z-index:10;white-space:nowrap;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="banana-count">🍌 0</div>
+    <div id="hp-label">❤️ HP</div>
+    <div id="hp-wrap"><div id="hp-bar" style="width:100%"></div></div>
+    <div id="form-name">Baby Monkey</div>
+    <div id="distance-label">0 m</div>
+  </div>
+  <div id="boss-section">
+    <div id="boss-label">BOSS</div>
+    <div id="boss-hp-wrap"><div id="boss-hp-bar" style="width:100%"></div></div>
+  </div>
+</div>
+
+<div id="msg-overlay">
+  <div id="msg-title"></div>
+  <div id="msg-sub"></div>
+</div>
+
+<div id="start-screen">
+  <div id="start-title">KONG RUN</div>
+  <div id="start-subtitle">Evolve · Fight · Ascend</div>
+  <div id="start-forms"></div>
+  <div id="controls-hint">JUMP: TAP / SPACE &nbsp;|&nbsp; ATTACK BOSS: TAP RAPIDLY</div>
+  <div id="start-hint">TAP TO BEGIN</div>
+</div>
+
+<div id="fire-btn" title="Fire Weapon [F/Shift]">
+  <span id="fire-icon">🍌</span>
+  <span id="fire-cd">READY</span>
+  <span id="weapon-name">THROW</span>
+</div>
+<div id="tap-hint">JUMP: TAP/SPACE &nbsp;|&nbsp; WEAPON: 🔴 BUTTON / F</div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const MONKEY_X        = -3.2;
+const SPAWN_X         = 13;
+const DESPAWN_X       = -11;
+const BASE_SPEED      = 6.5;
+const GRAVITY         = -30;
+const JUMP_VEL        = 13.5;
+const BOSS_X          = 3.8;
+const BOSS_TRIGGER    = 110;   // metres between bosses
+
+const FORM_COLORS = [0xb07040,0x904020,0x606878,0x3060d0,0x9030c0,0xe0a000,0x40d0ff,0xffffff];
+
+const FORMS = [
+  {name:'Baby Monkey',    color:FORM_COLORS[0], hpMax:4,  atk:1,  spd:1.00, jmp:1.00},
+  {name:'Wild Chimp',     color:FORM_COLORS[1], hpMax:6,  atk:2,  spd:1.12, jmp:1.10},
+  {name:'Silverback',     color:FORM_COLORS[2], hpMax:10, atk:4,  spd:1.22, jmp:1.18},
+  {name:'Ancient Ape',    color:FORM_COLORS[3], hpMax:14, atk:7,  spd:1.32, jmp:1.26},
+  {name:'Primal Beast',   color:FORM_COLORS[4], hpMax:20, atk:12, spd:1.42, jmp:1.33},
+  {name:'Kaiju Kong',     color:FORM_COLORS[5], hpMax:28, atk:20, spd:1.52, jmp:1.40},
+  {name:'Cosmic Ape',     color:FORM_COLORS[6], hpMax:40, atk:32, spd:1.62, jmp:1.47},
+  {name:'Eternal Simian', color:FORM_COLORS[7], hpMax:55, atk:55, spd:1.72, jmp:1.54},
+];
+
+const BOSSES = [
+  {name:'JUNGLE BULLY',   color:0x40a020, hpMax:18,  atk:1, reward:40,  atkCd:3.2},
+  {name:'CROCO GANG',     color:0x208050, hpMax:38,  atk:1, reward:70,  atkCd:2.9},
+  {name:'IRON RHINO',     color:0x909090, hpMax:70,  atk:1, reward:100, atkCd:2.6},
+  {name:'STORM EAGLE',    color:0x3060e0, hpMax:110, atk:2, reward:140, atkCd:2.3},
+  {name:'TITAN DRAGON',   color:0xc03020, hpMax:170, atk:2, reward:190, atkCd:2.0},
+  {name:'MEGA KRAKEN',    color:0x2040b0, hpMax:260, atk:2, reward:260, atkCd:1.8},
+  {name:'STAR DESTROYER', color:0x8030ff, hpMax:400, atk:3, reward:400, atkCd:1.6},
+];
+
+// ═══════════════════════════════════════════════════════════
+// RENDERER / SCENE
+// ═══════════════════════════════════════════════════════════
+const canvas   = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x6ab850);  // bright jungle sky
+scene.fog = new THREE.Fog(0x3a8028, 18, 40);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 4.2, 10.5);
+camera.lookAt(0, 1.8, 0);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// Lighting
+const hemi = new THREE.HemisphereLight(0x88dd88, 0x223322, 0.85);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff8cc, 1.05);
+sun.position.set(6, 14, 9); sun.castShadow = true;
+sun.shadow.mapSize.setScalar(1024);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xaaffaa, 0.32);
+fill.position.set(-5, 5, 9); scene.add(fill);
+
+// ═══════════════════════════════════════════════════════════
+// WORLD
+// ═══════════════════════════════════════════════════════════
+// Ground tiles (two that cycle for endless scroll)
+const gMat = new THREE.MeshPhongMaterial({color:0x2a5a18, shininess:4});
+const gGeo = new THREE.BoxGeometry(32, 0.5, 10);
+const groundTiles = [
+  new THREE.Mesh(gGeo, gMat),
+  new THREE.Mesh(gGeo, gMat),
+];
+groundTiles.forEach((t,i) => {
+  t.position.set(i*32-16, -0.25, 0);
+  t.receiveShadow = true;
+  scene.add(t);
+});
+
+// Dirt path strip
+const dirtMat = new THREE.MeshPhongMaterial({color:0x8b6840, shininess:3});
+const dirtGeo = new THREE.BoxGeometry(32, 0.01, 3.6);
+const dirtTiles = [
+  new THREE.Mesh(dirtGeo, dirtMat),
+  new THREE.Mesh(dirtGeo, dirtMat),
+];
+dirtTiles.forEach((t,i) => {
+  t.position.set(i*32-16, 0.001, 0);
+  scene.add(t);
+});
+
+// ═══════════════════════════════════════════════════════════
+// PARALLAX BACKGROUND SYSTEM
+// ═══════════════════════════════════════════════════════════
+const paraItems = []; // {mesh, factor, lb, rb}
+
+function mkCloud(x, z) {
+  const g = new THREE.Group();
+  for(let i=0;i<4;i++){
+    const c=new THREE.Mesh(
+      new THREE.SphereGeometry(1.0+Math.random()*0.8,7,5),
+      new THREE.MeshPhongMaterial({color:0xcceecc,transparent:true,opacity:0.65+Math.random()*0.22})
+    );
+    c.position.set((i-1.5)*1.6,Math.random()*0.5,0); g.add(c);
+  }
+  g.position.set(x, 8.2+Math.random()*1.8, z);
+  return g;
+}
+
+function mkMountain(x, z) {
+  const g = new THREE.Group();
+  const h=5.5+Math.random()*4.5;
+  const m=new THREE.Mesh(
+    new THREE.ConeGeometry(3.5+Math.random()*2.5,h,6),
+    new THREE.MeshPhongMaterial({color:0x0d2808,shininess:0,flatShading:true})
+  );
+  m.position.y=h*0.5; g.add(m);
+  g.position.set(x, 0, z); return g;
+}
+
+function mkParaTree(x, z, h, col) {
+  const g = new THREE.Group();
+  const trunk=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16*(h/4),0.24*(h/4),h*0.42,6),
+    new THREE.MeshPhongMaterial({color:0x3a2008})
+  );
+  trunk.position.y=h*0.21; g.add(trunk);
+  const fol=new THREE.Mesh(
+    new THREE.ConeGeometry(h*0.52,h*0.82,8),
+    new THREE.MeshPhongMaterial({color:col||0x1e5a18,shininess:2})
+  );
+  fol.position.y=h*0.76; g.add(fol);
+  const fol2=new THREE.Mesh(
+    new THREE.ConeGeometry(h*0.40,h*0.58,7),
+    new THREE.MeshPhongMaterial({color:new THREE.Color(col||0x226a1a).addScalar(0.04),shininess:2})
+  );
+  fol2.position.y=h*0.96; g.add(fol2);
+  g.position.set(x,0,z); return g;
+}
+
+function mkBush(x, z) {
+  const g = new THREE.Group();
+  const nb=2+Math.floor(Math.random()*3);
+  for(let i=0;i<nb;i++){
+    const b=new THREE.Mesh(
+      new THREE.SphereGeometry(0.40+Math.random()*0.30,6,5),
+      new THREE.MeshPhongMaterial({color:0x2a6410+Math.floor(Math.random()*0x0a0a08)})
+    );
+    b.position.set((i-nb/2)*0.55+Math.random()*0.3,0.28+Math.random()*0.18,(Math.random()-0.5)*0.3);
+    g.add(b);
+  }
+  g.position.set(x,0,z); return g;
+}
+
+// Clouds — very slow
+for(let i=0;i<9;i++){
+  const m=mkCloud(-36+i*9+Math.random()*3-1.5,-15);
+  scene.add(m); paraItems.push({mesh:m,factor:0.04,lb:-38,rb:38});
+}
+// Distant mountains — slow
+for(let i=0;i<9;i++){
+  const m=mkMountain(-32+i*8+Math.random()*3-1.5,-17);
+  scene.add(m); paraItems.push({mesh:m,factor:0.07,lb:-32,rb:32});
+}
+// Far trees — slightly faster
+for(let i=0;i<15;i++){
+  const m=mkParaTree(-28+i*4+Math.random()*1.5-0.75,-11,6+Math.random()*3.5,0x164812);
+  scene.add(m); paraItems.push({mesh:m,factor:0.20,lb:-28,rb:28});
+}
+// Mid trees — medium speed
+for(let i=0;i<11;i++){
+  const m=mkParaTree(-22+i*4.5+Math.random()*2-1,-5.5,4.0+Math.random()*2.8,0x1e5a18);
+  scene.add(m); paraItems.push({mesh:m,factor:0.42,lb:-24,rb:24});
+}
+// Close bushes — fast
+for(let i=0;i<15;i++){
+  const bz=-2.2+(Math.random()<0.5?-0.5:0.5)*Math.random()*0.3;
+  const m=mkBush(-20+i*2.9+Math.random()*1.2-0.6,bz);
+  scene.add(m); paraItems.push({mesh:m,factor:0.78,lb:-22,rb:22});
+}
+
+// ═══════════════════════════════════════════════════════════
+// MONKEY
+// ═══════════════════════════════════════════════════════════
+const monkeyGroup = new THREE.Group();
+monkeyGroup.position.set(MONKEY_X, 0, 0);
+monkeyGroup.rotation.y = Math.PI/2; // face +X (toward obstacles)
+scene.add(monkeyGroup);
+
+const bodyMat  = new THREE.MeshPhongMaterial({color:0xb07040, shininess:55, specular:0x441a00});
+const faceMat  = new THREE.MeshPhongMaterial({color:0xd09060, shininess:22, specular:0x220800});
+const bellyMat = new THREE.MeshPhongMaterial({color:0xd8a070, shininess:14});
+const browMat2 = new THREE.MeshPhongMaterial({color:0x6a3010});
+const eyeMatM  = new THREE.MeshBasicMaterial({color:0x120800});
+const eyeShineM= new THREE.MeshBasicMaterial({color:0xffffff});
+
+// Body (barrel chest sphere)
+const mBody = new THREE.Mesh(new THREE.SphereGeometry(0.60,14,14), bodyMat);
+mBody.scale.set(1.12,1.0,0.82); mBody.position.y=1.70; mBody.castShadow=true;
+monkeyGroup.add(mBody);
+
+// Belly highlight
+const mBelly = new THREE.Mesh(new THREE.SphereGeometry(0.36,10,10), bellyMat);
+mBelly.scale.set(0.85,0.80,0.44); mBelly.position.set(0,1.68,0.36);
+monkeyGroup.add(mBelly);
+
+// Head
+const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.50,14,14), bodyMat);
+mHead.position.y=2.65; mHead.castShadow=true;
+monkeyGroup.add(mHead);
+
+// Snout
+const mSnout = new THREE.Mesh(new THREE.SphereGeometry(0.27,10,10), faceMat);
+mSnout.scale.set(1.1,0.72,0.88); mSnout.position.set(0,2.54,0.38);
+monkeyGroup.add(mSnout);
+
+// Brow ridge
+const mBrow = new THREE.Mesh(new THREE.BoxGeometry(0.54,0.09,0.12), browMat2);
+mBrow.position.set(0,2.84,0.42); monkeyGroup.add(mBrow);
+
+// Eyes + shines
+const mEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.09,7,7), eyeMatM);
+mEyeL.position.set(-0.17,2.72,0.42); monkeyGroup.add(mEyeL);
+const mEyeR = mEyeL.clone(); mEyeR.position.x=0.17; monkeyGroup.add(mEyeR);
+const mShL = new THREE.Mesh(new THREE.SphereGeometry(0.03,5,5), eyeShineM);
+mShL.position.set(-0.15,2.74,0.50); monkeyGroup.add(mShL);
+const mShR = mShL.clone(); mShR.position.x=0.15; monkeyGroup.add(mShR);
+
+// Ears
+const mEarL = new THREE.Mesh(new THREE.SphereGeometry(0.17,8,8), bodyMat);
+mEarL.position.set(-0.48,2.68,0); monkeyGroup.add(mEarL);
+const mEarR = mEarL.clone(); mEarR.position.x=0.48; monkeyGroup.add(mEarR);
+const mIEL = new THREE.Mesh(new THREE.SphereGeometry(0.09,6,6), faceMat);
+mIEL.position.set(-0.54,2.68,0.05); monkeyGroup.add(mIEL);
+const mIER = mIEL.clone(); mIER.position.x=0.54; monkeyGroup.add(mIER);
+
+// Arms (long primate)
+const mLArm = new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.14,1.60,8), bodyMat);
+mLArm.position.set(-0.70,1.70,0); mLArm.rotation.z=0.28; mLArm.castShadow=true;
+monkeyGroup.add(mLArm);
+const mRArm = mLArm.clone(); mRArm.position.x=0.70; mRArm.rotation.z=-0.28;
+monkeyGroup.add(mRArm);
+
+// Hands
+const mLHand = new THREE.Mesh(new THREE.SphereGeometry(0.20,8,8), bodyMat);
+mLHand.position.set(-1.02,1.02,0); monkeyGroup.add(mLHand);
+const mRHand = mLHand.clone(); mRHand.position.x=1.02; monkeyGroup.add(mRHand);
+
+// Legs
+const mLLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.18,1.02,8), bodyMat);
+mLLeg.position.set(-0.28,0.92,0); mLLeg.rotation.z=0.06; mLLeg.castShadow=true;
+monkeyGroup.add(mLLeg);
+const mRLeg = mLLeg.clone(); mRLeg.position.x=0.28; mRLeg.rotation.z=-0.06;
+monkeyGroup.add(mRLeg);
+
+// Feet
+const mFootL = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8), bodyMat);
+mFootL.scale.set(1.15,0.50,1.45); mFootL.position.set(-0.28,0.40,0.10);
+monkeyGroup.add(mFootL);
+const mFootR = mFootL.clone(); mFootR.position.x=0.28; monkeyGroup.add(mFootR);
+
+// Tail
+const tailCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0.28,1.20,0),
+  new THREE.Vector3(0.60,1.10,0),
+  new THREE.Vector3(0.80,0.88,0),
+  new THREE.Vector3(0.76,0.58,0),
+]);
+const mTail = new THREE.Mesh(
+  new THREE.TubeGeometry(tailCurve,10,0.07,7,false), bodyMat
+);
+monkeyGroup.add(mTail);
+
+// Per-form accessories
+const extrasGroup = new THREE.Group();
+monkeyGroup.add(extrasGroup);
+
+// Punch flash
+const punchGroup = new THREE.Group();
+punchGroup.visible = false;
+monkeyGroup.add(punchGroup);
+const punchMat = new THREE.MeshPhongMaterial({color:0xffe040,emissive:0xffaa00,emissiveIntensity:1.0,shininess:80});
+const punchMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,8), punchMat);
+punchMesh.position.set(1.35,2.0,0.2); punchGroup.add(punchMesh);
+
+const charMeshes=[mBody,mHead,mLArm,mRArm,mLLeg,mRLeg,mEarL,mEarR,mFootL,mFootR,mTail];
+
+// Aura rings
+const auraGroup = new THREE.Group();
+monkeyGroup.add(auraGroup);
+
+function rebuildAura(idx) {
+  while(auraGroup.children.length) auraGroup.remove(auraGroup.children[0]);
+  if(idx===0) return;
+  const f = FORMS[idx];
+  for(let i=0;i<3;i++){
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.9+i*0.30,0.04,7,32),
+      new THREE.MeshBasicMaterial({color:f.color,transparent:true,opacity:0.65-i*0.18})
+    );
+    ring.rotation.x = i*0.55; ring.position.y=1.70;
+    auraGroup.add(ring);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════
+let formIdx     = 0;
+let bananas     = 0;
+let distance    = 0;
+let monkeyHP    = FORMS[0].hpMax;
+let monkeyMaxHP = FORMS[0].hpMax;
+let monkeyY     = 0;
+let monkeyVY    = 0;
+let isGrounded  = true;
+
+// 'start' | 'running' | 'boss_fight' | 'boss_dead' | 'transforming' | 'game_over'
+let phase       = 'start';
+
+let bossData    = null;
+let bossIdx     = 0;
+let nextBossDist= BOSS_TRIGGER;
+
+const activeObjs = [];
+let spawnTimer  = 0;
+let nextSpawn   = 1.8;
+let runCycle    = 0;
+let punchTimer  = 0;
+let iTimer      = 0;
+let flashPhase  = 0;
+let camShake    = 0;
+let msgTimer    = null;
+
+// Foot dust
+const dustParts = [];
+let   lastDustStep = 0;
+
+// Weapon system
+const projectiles  = [];  // {mesh, x, y, vx, vy, dmg, color, type}
+const exParts      = [];  // explosion particles
+let   weaponCd     = 0;
+const WEAPON_CDS   = [3.0, 4.0, 5.0]; // banana, rpg, cosmic
+const WEAPON_EMOJIS= ['🍌','🚀','⚡'];
+const WEAPON_NAMES = ['THROW','RPG','COSMIC'];
+function weaponTier(){ return formIdx<=2?0:(formIdx<=5?1:2); }
+
+// ═══════════════════════════════════════════════════════════
+// HUD HELPERS
+// ═══════════════════════════════════════════════════════════
+function showMsg(title, sub, dur) {
+  const t=document.getElementById('msg-title');
+  const s=document.getElementById('msg-sub');
+  t.textContent=title; s.textContent=sub;
+  t.style.opacity='1'; s.style.opacity='1';
+  clearTimeout(msgTimer);
+  if(dur<90) msgTimer=setTimeout(()=>{t.style.opacity='0';s.style.opacity='0';},dur*1000);
+}
+function hideMsg(){
+  document.getElementById('msg-title').style.opacity='0';
+  document.getElementById('msg-sub').style.opacity='0';
+}
+function updateHPBar(){
+  document.getElementById('hp-bar').style.width=Math.max(0,monkeyHP/monkeyMaxHP*100)+'%';
+}
+function updateBossBar(){
+  if(!bossData) return;
+  document.getElementById('boss-hp-bar').style.width=Math.max(0,bossData.hp/bossData.maxHp*100)+'%';
+}
+function updateBananas(){
+  document.getElementById('banana-count').textContent='🍌 '+bananas;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FORM ACCESSORIES (unique look per evolution)
+// ═══════════════════════════════════════════════════════════
+function buildFormExtras(idx) {
+  while(extrasGroup.children.length) extrasGroup.remove(extrasGroup.children[0]);
+  extrasGroup.rotation.y = 0;
+  const col = new THREE.Color(FORMS[idx].color);
+
+  if(idx===1) {
+    // Wild Chimp — red battle bandana
+    const bn=new THREE.Mesh(new THREE.TorusGeometry(0.53,0.065,4,22),
+      new THREE.MeshPhongMaterial({color:0xdd1515,shininess:12}));
+    bn.position.set(0,2.65,0); bn.rotation.x=Math.PI/2; extrasGroup.add(bn);
+    const knot=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.11,0.08),
+      new THREE.MeshPhongMaterial({color:0xdd1515}));
+    knot.position.set(0,2.65,0.55); extrasGroup.add(knot);
+  }
+  else if(idx===2) {
+    // Silverback — metal chest plate + wristbands
+    const plate=new THREE.Mesh(new THREE.CylinderGeometry(0.44,0.44,0.07,10),
+      new THREE.MeshPhongMaterial({color:0xc0c0d0,shininess:70,specular:0x888898}));
+    plate.position.set(0,1.68,0.52); plate.rotation.x=Math.PI/2; extrasGroup.add(plate);
+    [-1.02,1.02].forEach(x=>{
+      const wb=new THREE.Mesh(new THREE.TorusGeometry(0.22,0.07,5,14),
+        new THREE.MeshPhongMaterial({color:0xa0a0b0,shininess:45}));
+      wb.position.set(x,1.02,0); wb.rotation.z=Math.PI/2; extrasGroup.add(wb);
+    });
+  }
+  else if(idx===3) {
+    // Ancient Ape — bronze crown with 5 prongs
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.50,0.076,5,22),
+      new THREE.MeshPhongMaterial({color:0xcb9a10,shininess:70,specular:0x806000}));
+    ring.position.set(0,2.92,0); ring.rotation.x=Math.PI/2; extrasGroup.add(ring);
+    for(let i=0;i<5;i++){
+      const a=(i/5)*Math.PI*2;
+      const prong=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.32,4),
+        new THREE.MeshPhongMaterial({color:0xe0b020,shininess:60}));
+      prong.position.set(Math.cos(a)*0.50,3.12,Math.sin(a)*0.50);
+      prong.lookAt(new THREE.Vector3(Math.cos(a)*2,3.70,Math.sin(a)*2));
+      extrasGroup.add(prong);
+    }
+    // Tribal belly rune circles
+    const runeM=new THREE.MeshBasicMaterial({color:0x5a3800});
+    for(let i=0;i<3;i++){
+      const rune=new THREE.Mesh(new THREE.TorusGeometry(0.10+i*0.04,0.025,4,10),runeM);
+      rune.position.set(0,1.85-i*0.20,0.54); extrasGroup.add(rune);
+    }
+  }
+  else if(idx===4) {
+    // Primal Beast — bone shoulder spikes + chest scars
+    const boneM=new THREE.MeshPhongMaterial({color:0xe0c878,shininess:8});
+    [-0.82,0.82].forEach(side=>{
+      for(let j=0;j<3;j++){
+        const sp=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.42,5),boneM);
+        sp.position.set(side,2.15-j*0.14,-0.04);
+        sp.rotation.z=side<0?-(0.42+j*0.12):(0.42+j*0.12);
+        extrasGroup.add(sp);
+      }
+    });
+    const scarM=new THREE.MeshBasicMaterial({color:0x1a0000});
+    for(let i=0;i<3;i++){
+      const sc=new THREE.Mesh(new THREE.BoxGeometry(0.30+i*0.05,0.04,0.06),scarM);
+      sc.position.set(0,1.88-i*0.18,0.52); sc.rotation.z=(i-1)*0.22; extrasGroup.add(sc);
+    }
+  }
+  else if(idx===5) {
+    // Kaiju Kong — massive skull ridge plates + knuckle studs
+    const skM=new THREE.MeshPhongMaterial({color:0x706050,shininess:5});
+    [0,Math.PI*0.5,Math.PI,Math.PI*1.5].forEach(a=>{
+      const pl=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.58,0.36),skM);
+      pl.position.set(Math.cos(a)*0.36,2.90,Math.sin(a)*0.36);
+      pl.rotation.y=a; extrasGroup.add(pl);
+    });
+    [-1.02,1.02].forEach(x=>{
+      for(let i=0;i<4;i++){
+        const st=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.18,4),skM);
+        st.position.set(x,1.02+(i%2)*0.18,0.15-(i%2)*0.10);
+        extrasGroup.add(st);
+      }
+    });
+  }
+  else if(idx===6) {
+    // Cosmic Ape — orbital star ring + energy shoulder pads + halo
+    const stM=new THREE.MeshBasicMaterial({color:0x40ffff});
+    for(let i=0;i<10;i++){
+      const a=(i/10)*Math.PI*2;
+      const star=new THREE.Mesh(new THREE.SphereGeometry(0.09,5,4),stM);
+      star.position.set(Math.cos(a)*1.18,1.70,Math.sin(a)*1.18); extrasGroup.add(star);
+    }
+    const haloM=new THREE.MeshBasicMaterial({color:0xaaffff,transparent:true,opacity:0.88});
+    const halo=new THREE.Mesh(new THREE.TorusGeometry(0.64,0.055,6,26),haloM);
+    halo.position.set(0,3.18,0); extrasGroup.add(halo);
+    const padM=new THREE.MeshPhongMaterial({color:0x206080,emissive:0x1080a0,emissiveIntensity:0.55,shininess:40});
+    [-0.74,0.74].forEach(x=>{
+      const pad=new THREE.Mesh(new THREE.SphereGeometry(0.28,8,6),padM);
+      pad.scale.set(1.0,0.50,0.82); pad.position.set(x,1.98,0); extrasGroup.add(pad);
+    });
+  }
+  else if(idx===7) {
+    // Eternal Simian — white wings + divine gold crown
+    const wingM=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.78,side:THREE.DoubleSide});
+    [-1,1].forEach(side=>{
+      const wing=new THREE.Mesh(new THREE.ConeGeometry(0.80,2.30,4),wingM);
+      wing.position.set(side*0.92,2.15,-0.50);
+      wing.rotation.z=side*(Math.PI/3); wing.rotation.x=0.22; extrasGroup.add(wing);
+      // Feather detail
+      for(let j=0;j<4;j++){
+        const fth=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.65,3),wingM);
+        fth.position.set(side*(1.0+j*0.22),1.60-j*0.18,-0.45);
+        fth.rotation.z=side*(Math.PI/3+j*0.10); extrasGroup.add(fth);
+      }
+    });
+    const divM=new THREE.MeshPhongMaterial({color:0xffd060,emissive:0xffa000,emissiveIntensity:0.50,shininess:80});
+    const cBase=new THREE.Mesh(new THREE.TorusGeometry(0.52,0.078,5,22),divM);
+    cBase.position.set(0,3.05,0); cBase.rotation.x=Math.PI/2; extrasGroup.add(cBase);
+    for(let i=0;i<7;i++){
+      const a=(i/7)*Math.PI*2;
+      const sp=new THREE.Mesh(new THREE.ConeGeometry(0.065,0.38,4),divM);
+      sp.position.set(Math.cos(a)*0.52,3.22,Math.sin(a)*0.52);
+      sp.lookAt(new THREE.Vector3(Math.cos(a)*2,3.68,Math.sin(a)*2)); extrasGroup.add(sp);
+    }
+    const bglow=new THREE.Mesh(new THREE.SphereGeometry(0.85,10,8),
+      new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.10,side:THREE.BackSide}));
+    bglow.position.set(0,1.70,0); extrasGroup.add(bglow);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// APPLY FORM
+// ═══════════════════════════════════════════════════════════
+function applyForm(idx) {
+  const f = FORMS[idx];
+  const c = new THREE.Color(f.color);
+  charMeshes.forEach(m=>{ if(m.material&&m.material.color) m.material.color.set(c); });
+  faceMat.color.copy(c).multiplyScalar(1.32).addScalar(0.02);
+  bellyMat.color.copy(c).multiplyScalar(1.26).addScalar(0.03);
+  monkeyGroup.scale.setScalar(0.86+idx*0.048);
+  monkeyMaxHP = f.hpMax;
+  monkeyHP    = monkeyMaxHP;
+  rebuildAura(idx);
+  buildFormExtras(idx);
+  document.getElementById('form-name').textContent = f.name;
+  updateHPBar();
+}
+
+// ═══════════════════════════════════════════════════════════
+// OBJECT FACTORY
+// ═══════════════════════════════════════════════════════════
+function mkBanana() {
+  const g = new THREE.Group();
+  const bm = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28,8,8),
+    new THREE.MeshPhongMaterial({color:0xffe030,emissive:0xcc7700,emissiveIntensity:0.45,shininess:70})
+  );
+  bm.scale.set(1.0,0.56,0.60); bm.rotation.z=0.38; bm.position.y=1.55; g.add(bm);
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.34,0.030,6,16),
+    new THREE.MeshBasicMaterial({color:0xffee60,transparent:true,opacity:0.50})
+  );
+  ring.position.y=1.55; ring.rotation.x=Math.PI/2; g.add(ring);
+  return {mesh:g, type:'banana', hbox:{w:0.38,h:0.60,y:1.28}};
+}
+
+function mkBunch() {
+  const g = new THREE.Group();
+  for(let i=0;i<4;i++){
+    const bm2 = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22,8,8),
+      new THREE.MeshPhongMaterial({color:0xffdd20,emissive:0xcc8800,emissiveIntensity:0.50})
+    );
+    bm2.scale.set(1.0,0.55,0.60);
+    const a=(i/4)*Math.PI*2;
+    bm2.position.set(Math.cos(a)*0.30, 1.55+Math.sin(a)*0.12, Math.sin(a)*0.12);
+    g.add(bm2);
+  }
+  return {mesh:g, type:'banana_bunch', hbox:{w:0.72,h:0.56,y:1.28}};
+}
+
+function mkRock() {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(0.48,0),
+    new THREE.MeshPhongMaterial({color:0x887060,shininess:8})
+  );
+  m.castShadow=true; m.position.set(0,0.46,0); g.add(m);
+  const m2 = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(0.28,0),
+    new THREE.MeshPhongMaterial({color:0x786050,shininess:5})
+  );
+  m2.position.set(0.45,0.28,0.15); g.add(m2);
+  return {mesh:g, type:'rock', hbox:{w:0.55,h:0.92,y:0}};
+}
+
+function mkStump() {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.38,0.44,0.90,8),
+    new THREE.MeshPhongMaterial({color:0x7a4a22,shininess:5})
+  );
+  trunk.position.y=0.45; trunk.castShadow=true; g.add(trunk);
+  const top = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.40,0.38,0.12,8),
+    new THREE.MeshPhongMaterial({color:0xc8a060,shininess:4})
+  );
+  top.position.y=0.96; g.add(top);
+  return {mesh:g, type:'rock', hbox:{w:0.50,h:0.98,y:0}};
+}
+
+function spawnObject() {
+  const r = Math.random();
+  let obj;
+  if(r<0.34)       obj=mkBanana();
+  else if(r<0.58)  obj=mkBunch();
+  else if(r<0.80)  obj=mkRock();
+  else             obj=mkStump();
+  obj.mesh.position.x = SPAWN_X;
+  obj.mesh.position.z = (Math.random()-0.5)*0.9;
+  scene.add(obj.mesh);
+  activeObjs.push(obj);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOSS FACTORY
+// ═══════════════════════════════════════════════════════════
+// Boss 0 — Jungle Bully: huge gorilla with tree-trunk club
+function makeBossGorilla(bDef) {
+  const g=new THREE.Group();
+  const m=new THREE.MeshPhongMaterial({color:bDef.color,shininess:45,specular:new THREE.Color(bDef.color).multiplyScalar(0.3)});
+  const dm=new THREE.MeshPhongMaterial({color:new THREE.Color(bDef.color).multiplyScalar(0.60)});
+  const lm=new THREE.MeshPhongMaterial({color:new THREE.Color(bDef.color).multiplyScalar(1.38)});
+  // Massive barrel chest
+  const body=new THREE.Mesh(new THREE.SphereGeometry(0.80,14,12),m);
+  body.scale.set(1.28,1.05,0.86); body.position.y=1.72; body.castShadow=true; g.add(body);
+  // Hunched shoulders
+  [-0.98,0.98].forEach(x=>{ const sh=new THREE.Mesh(new THREE.SphereGeometry(0.46,9,8),m); sh.position.set(x,2.08,0); g.add(sh); });
+  // Head + sagittal crest
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.58,12,12),m); head.position.y=2.98; g.add(head);
+  const crest=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.40,0.22,8),m); crest.position.y=3.50; g.add(crest);
+  const sn=new THREE.Mesh(new THREE.SphereGeometry(0.34,9,8),lm); sn.scale.set(1.0,0.68,0.82); sn.position.set(0,2.82,0.52); g.add(sn);
+  const brow=new THREE.Mesh(new THREE.BoxGeometry(0.82,0.14,0.18),dm); brow.position.set(0,3.16,0.50); g.add(brow);
+  // Eyes
+  const em=new THREE.MeshBasicMaterial({color:0xff0000});
+  [-0.24,0.24].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.12,7,7),em); e.position.set(x,3.06,0.54); g.add(e); });
+  [-0.58,0.58].forEach(x=>{ const ear=new THREE.Mesh(new THREE.SphereGeometry(0.20,7,7),m); ear.position.set(x,2.92,0); g.add(ear); });
+  // Long knuckle-dragging arms
+  [-1,1].forEach(s=>{
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.20,2.05,8),m);
+    arm.position.set(s*1.06,1.50,0.12); arm.rotation.z=s*0.48; g.add(arm);
+    const fist=new THREE.Mesh(new THREE.SphereGeometry(0.36,8,8),m);
+    fist.scale.set(1.2,0.85,1.0); fist.position.set(s*1.58,0.56,0.22); g.add(fist);
+  });
+  [-1,1].forEach(s=>{ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.24,1.1,8),m); leg.position.set(s*0.38,0.98,0); g.add(leg); });
+  // Tree-trunk club
+  const club=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.26,2.0,7),new THREE.MeshPhongMaterial({color:0x5a3a18}));
+  club.rotation.z=-0.52; club.position.set(1.82,1.05,-0.18); g.add(club);
+  const knob=new THREE.Mesh(new THREE.SphereGeometry(0.42,7,6),new THREE.MeshPhongMaterial({color:0x6a4a20}));
+  knob.position.set(2.45,0.28,-0.22); g.add(knob);
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(1.22,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.08,side:THREE.BackSide})));
+  g.children[g.children.length-1].position.y=1.72;
+  return g;
+}
+
+// Boss 1 — Croco Gang: long armored crocodile
+function makeBossCroc(bDef) {
+  const g=new THREE.Group();
+  const m=new THREE.MeshPhongMaterial({color:bDef.color,shininess:30});
+  const dm=new THREE.MeshPhongMaterial({color:new THREE.Color(bDef.color).multiplyScalar(0.55)});
+  const belly=new THREE.MeshPhongMaterial({color:0xd4cc70,shininess:10});
+  const toothM=new THREE.MeshPhongMaterial({color:0xfafae0});
+  // Long low body — depth=Z goes toward monkey
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.76,0.62,2.20),m);
+  body.position.set(0,0.88,0.05); g.add(body);
+  new THREE.Mesh(new THREE.BoxGeometry(0.60,0.12,1.90),belly); // belly strip
+  const bstr=new THREE.Mesh(new THREE.BoxGeometry(0.60,0.12,1.90),belly); bstr.position.set(0,0.56,0.05); g.add(bstr);
+  // Tail
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.34,1.40,7),m);
+  tail.rotation.x=Math.PI/2; tail.position.set(0,0.78,-1.20); g.add(tail);
+  const tailTip=new THREE.Mesh(new THREE.ConeGeometry(0.10,0.60,6),m);
+  tailTip.rotation.x=Math.PI/2; tailTip.position.set(0,0.76,-2.20); g.add(tailTip);
+  // Head
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.70,0.54,0.78),m); head.position.set(0,1.0,1.26); g.add(head);
+  const snoutT=new THREE.Mesh(new THREE.BoxGeometry(0.56,0.22,0.88),m); snoutT.position.set(0,0.96,1.78); g.add(snoutT);
+  const jaw=new THREE.Mesh(new THREE.BoxGeometry(0.50,0.16,0.82),belly); jaw.position.set(0,0.74,1.76); g.add(jaw);
+  // Teeth
+  for(let i=0;i<6;i++){ const t=new THREE.Mesh(new THREE.ConeGeometry(0.04,0.18,4),toothM); t.position.set((i-2.5)*0.09,0.84,2.04); g.add(t); }
+  // Orange slit eyes on top
+  const em=new THREE.MeshBasicMaterial({color:0xff6600});
+  [-0.22,0.22].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.10,7,6),em); e.position.set(x,1.30,1.18); g.add(e); });
+  // Spine ridge
+  for(let i=0;i<9;i++){ const sp=new THREE.Mesh(new THREE.ConeGeometry(0.055,0.24,4),dm); sp.position.set(0,1.20,-1.0+i*0.28); g.add(sp); }
+  // 4 stubby legs
+  [[-0.40,0.5],[0.40,0.5],[-0.40,-0.3],[0.40,-0.3]].forEach(p=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.10,0.52,6),m); leg.position.set(p[0],0.58,p[1]); g.add(leg);
+    const ft=new THREE.Mesh(new THREE.SphereGeometry(0.14,6,5),m); ft.scale.set(1.4,0.5,1.1); ft.position.set(p[0],0.30,p[1]+0.08); g.add(ft);
+  });
+  const gl=new THREE.Mesh(new THREE.SphereGeometry(1.3,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.08,side:THREE.BackSide}));
+  gl.position.y=0.88; g.add(gl); return g;
+}
+
+// Boss 2 — Iron Rhino: heavily armored with giant horn
+function makeBossRhino(bDef) {
+  const g=new THREE.Group();
+  const m=new THREE.MeshPhongMaterial({color:bDef.color,shininess:16,flatShading:true});
+  const pm=new THREE.MeshPhongMaterial({color:new THREE.Color(bDef.color).addScalar(-0.06),shininess:45,specular:0x444448});
+  const hornM=new THREE.MeshPhongMaterial({color:0x282818,shininess:10});
+  // Tank body
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.10,1.10,1.82),m); body.position.set(0,1.18,0); g.add(body);
+  [-0.60,0.60].forEach(x=>{ const sh=new THREE.Mesh(new THREE.SphereGeometry(0.44,8,7),pm); sh.scale.set(0.9,0.72,0.80); sh.position.set(x,1.68,0); g.add(sh); });
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.42,0.52,8),m); neck.position.set(0,1.96,0.56); g.add(neck);
+  // Wide flat head
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.92,0.72,0.74),m); head.position.set(0,2.12,1.06); g.add(head);
+  const snout=new THREE.Mesh(new THREE.BoxGeometry(0.72,0.56,0.52),m); snout.position.set(0,1.94,1.52); g.add(snout);
+  // Big horn
+  const horn=new THREE.Mesh(new THREE.ConeGeometry(0.15,0.95,6),hornM); horn.position.set(0,2.44,1.64); horn.rotation.x=0.30; g.add(horn);
+  const horn2=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.42,5),hornM); horn2.position.set(0,2.36,1.20); horn2.rotation.x=0.24; g.add(horn2);
+  const em2=new THREE.MeshBasicMaterial({color:0xff2000});
+  [-0.28,0.28].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.08,6,5),em2); e.position.set(x,2.22,1.38); g.add(e); });
+  // Armor plates along back
+  for(let i=0;i<5;i++){ const pl=new THREE.Mesh(new THREE.BoxGeometry(0.86,0.08,0.30),pm); pl.position.set(0,1.74,-0.68+i*0.34); g.add(pl); }
+  // Thick legs + hooves
+  [[-0.38,-0.64],[0.38,-0.64],[-0.38,0.54],[0.38,0.54]].forEach(xz=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.18,0.92,7),m); leg.position.set(xz[0],0.60,xz[1]); g.add(leg);
+    const hoof=new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.20,0.18,7),hornM); hoof.position.set(xz[0],0.12,xz[1]); g.add(hoof);
+  });
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.12,0.52,5),m); tail.rotation.x=-0.5; tail.position.set(0,1.56,-1.04); g.add(tail);
+  const gl=new THREE.Mesh(new THREE.SphereGeometry(1.45,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.08,side:THREE.BackSide}));
+  gl.position.y=1.18; g.add(gl); return g;
+}
+
+// Boss 3 — Storm Eagle: giant wings, hooked beak, talons
+function makeBossEagle(bDef) {
+  const g=new THREE.Group();
+  const m=new THREE.MeshPhongMaterial({color:bDef.color,shininess:35});
+  const beakM=new THREE.MeshPhongMaterial({color:0xd4a020,shininess:30});
+  const wM=new THREE.MeshPhongMaterial({color:new THREE.Color(bDef.color).multiplyScalar(0.78),shininess:8,side:THREE.DoubleSide});
+  const chestM=new THREE.MeshPhongMaterial({color:0xfff0d0,shininess:5});
+  const talM=new THREE.MeshPhongMaterial({color:0xcc9a18,shininess:20});
+  // Streamlined body
+  const body=new THREE.Mesh(new THREE.SphereGeometry(0.55,12,10),m);
+  body.scale.set(0.82,1.22,0.72); body.position.y=1.82; g.add(body);
+  const chest=new THREE.Mesh(new THREE.SphereGeometry(0.38,9,8),chestM);
+  chest.scale.set(0.88,0.72,0.44); chest.position.set(0,1.70,0.42); g.add(chest);
+  // Head
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.44,12,10),m); head.position.y=2.82; g.add(head);
+  // Hooked beak
+  const beakG=new THREE.Group(); beakG.position.set(0,2.82,0.44); beakG.rotation.x=-0.30;
+  const beakU=new THREE.Mesh(new THREE.ConeGeometry(0.10,0.52,5),beakM);
+  beakU.rotation.x=Math.PI/2; beakU.position.z=0.10; beakG.add(beakU); g.add(beakG);
+  const beakL=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.30,5),beakM);
+  beakL.rotation.x=Math.PI/2; beakL.position.set(0,2.62,0.52); g.add(beakL);
+  // Fierce yellow eyes
+  const em=new THREE.MeshBasicMaterial({color:0xffcc00});
+  [-0.22,0.22].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.09,7,6),em); e.position.set(x,2.90,0.40); g.add(e); const p=new THREE.Mesh(new THREE.SphereGeometry(0.05,5,5),new THREE.MeshBasicMaterial({color:0x000000})); p.position.set(x,2.90,0.46); g.add(p); });
+  // Large spread wings (Z-axis = left/right in camera view)
+  [-1,1].forEach(s=>{
+    const w1=new THREE.Mesh(new THREE.ConeGeometry(0.32,1.85,4),wM);
+    w1.rotation.z=s*(Math.PI*0.46); w1.rotation.x=-0.16; w1.position.set(s*0.78,2.12,-0.10); g.add(w1);
+    const w2=new THREE.Mesh(new THREE.ConeGeometry(0.20,1.48,4),wM);
+    w2.rotation.z=s*(Math.PI*0.54); w2.rotation.x=-0.12; w2.position.set(s*1.50,1.62,-0.08); g.add(w2);
+    // Feather tips
+    for(let j=0;j<4;j++){ const fth=new THREE.Mesh(new THREE.ConeGeometry(0.06,0.48,3),wM); fth.rotation.z=s*(Math.PI*0.50+j*0.08); fth.position.set(s*(1.60+j*0.18),1.28-j*0.10,-0.06); g.add(fth); }
+  });
+  // Taloned feet
+  [-0.28,0.28].forEach(x=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.06,0.72,6),m); leg.position.set(x,1.18,0); g.add(leg);
+    for(let t=0;t<3;t++){
+      const ca=(t/3)*Math.PI-0.3;
+      const claw=new THREE.Mesh(new THREE.ConeGeometry(0.04,0.32,4),talM);
+      claw.position.set(x+Math.sin(ca)*0.22,0.70,Math.cos(ca)*0.22); claw.rotation.x=Math.PI/2-0.5; g.add(claw);
+    }
+  });
+  const gl=new THREE.Mesh(new THREE.SphereGeometry(1.35,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.10,side:THREE.BackSide}));
+  gl.position.y=1.82; g.add(gl); return g;
+}
+
+// Boss 4 — Titan Dragon: wings, long neck, fire belly, horns
+function makeBossDragon(bDef) {
+  const g=new THREE.Group();
+  const col=new THREE.Color(bDef.color);
+  const m=new THREE.MeshPhongMaterial({color:col,shininess:50,specular:col.clone().multiplyScalar(0.30)});
+  const dm=new THREE.MeshPhongMaterial({color:col.clone().multiplyScalar(0.68)});
+  const fireM=new THREE.MeshPhongMaterial({color:0xff6a10,emissive:0xff3300,emissiveIntensity:0.35,shininess:20});
+  const hornM=new THREE.MeshPhongMaterial({color:0x202010,shininess:8});
+  const wM=new THREE.MeshPhongMaterial({color:col.clone().multiplyScalar(0.72),transparent:true,opacity:0.88,side:THREE.DoubleSide});
+  // Hind body
+  const body=new THREE.Mesh(new THREE.SphereGeometry(0.72,12,12),m);
+  body.scale.set(1.15,1.05,0.85); body.position.y=1.55; g.add(body);
+  const fire=new THREE.Mesh(new THREE.SphereGeometry(0.48,10,9),fireM);
+  fire.scale.set(0.90,0.75,0.44); fire.position.set(0,1.42,0.48); g.add(fire);
+  // Long neck
+  const n1=new THREE.Mesh(new THREE.CylinderGeometry(0.20,0.34,0.76,8),m); n1.rotation.x=0.56; n1.position.set(0,2.12,0.42); g.add(n1);
+  const n2=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.22,0.65,8),m); n2.rotation.x=0.36; n2.position.set(0,2.60,0.72); g.add(n2);
+  // Head
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.42,12,10),m); head.position.set(0,3.02,0.84); g.add(head);
+  const sn=new THREE.Mesh(new THREE.BoxGeometry(0.30,0.26,0.56),m); sn.position.set(0,2.88,1.24); g.add(sn);
+  const em=new THREE.MeshBasicMaterial({color:0xff4000});
+  [-0.20,0.20].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.09,7,6),em); e.position.set(x,3.12,1.06); g.add(e); });
+  // Horns
+  [-0.18,0.18].forEach((x,i)=>{
+    const horn=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.56,5),hornM);
+    horn.rotation.z=(i===0?0.32:-0.32); horn.rotation.x=-0.26; horn.position.set(x,3.40,0.30); g.add(horn);
+  });
+  // Wings (Z-axis spread)
+  [-1,1].forEach(s=>{
+    const wing=new THREE.Mesh(new THREE.ConeGeometry(0.40,2.25,4),wM);
+    wing.rotation.z=s*(Math.PI*0.42); wing.rotation.x=-0.20; wing.position.set(s*0.88,2.28,-0.22); g.add(wing);
+    const rib=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.02,1.85,5),dm);
+    rib.rotation.z=s*(Math.PI*0.42); rib.position.set(s*0.74,2.28,-0.22); g.add(rib);
+    const wtip=new THREE.Mesh(new THREE.ConeGeometry(0.06,0.40,4),hornM);
+    wtip.rotation.z=s*(Math.PI*0.42); wtip.position.set(s*1.65,1.62,-0.10); g.add(wtip);
+  });
+  // Back spines
+  for(let i=0;i<6;i++){ const sp=new THREE.Mesh(new THREE.ConeGeometry(0.06,0.34-i*0.03,4),hornM); sp.position.set(0,2.25-i*0.12,-0.24+i*0.04); g.add(sp); }
+  // Legs + tail
+  [[-0.40,0.58],[0.40,0.58],[-0.42,-0.54],[0.42,-0.54]].forEach(xz=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.12,0.86,7),m); leg.position.set(xz[0],0.82,xz[1]); g.add(leg);
+    const ft=new THREE.Mesh(new THREE.SphereGeometry(0.18,7,6),m); ft.scale.set(1.3,0.5,1.1); ft.position.set(xz[0],0.36,xz[1]+0.04); g.add(ft);
+  });
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.28,1.5,7),m); tail.rotation.x=-0.40; tail.position.set(0,1.38,-1.0); g.add(tail);
+  const tsp=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.46,4),hornM); tsp.rotation.x=Math.PI*0.60; tsp.position.set(0,0.82,-1.68); g.add(tsp);
+  const gl=new THREE.Mesh(new THREE.SphereGeometry(1.48,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.08,side:THREE.BackSide}));
+  gl.position.y=1.55; g.add(gl); return g;
+}
+
+// Boss 5 — Mega Kraken: dome head + 6 curling tentacles
+function makeBossKraken(bDef) {
+  const g=new THREE.Group();
+  const col=new THREE.Color(bDef.color);
+  const m=new THREE.MeshPhongMaterial({color:col,shininess:22,specular:0x202040});
+  const dm=new THREE.MeshPhongMaterial({color:col.clone().multiplyScalar(0.55)});
+  const sucM=new THREE.MeshPhongMaterial({color:0xd090b8,shininess:15});
+  const em=new THREE.MeshBasicMaterial({color:0xff0088});
+  // Large dome
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(0.84,14,10),m);
+  dome.scale.set(1.0,1.32,0.86); dome.position.y=2.12; g.add(dome);
+  // Big glowing eyes
+  [-0.30,0.30].forEach(x=>{
+    const e=new THREE.Mesh(new THREE.SphereGeometry(0.17,8,8),em); e.position.set(x,2.42,0.70); g.add(e);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.26,7,7),new THREE.MeshBasicMaterial({color:0xff0088,transparent:true,opacity:0.25}));
+    glow.position.set(x,2.42,0.70); g.add(glow);
+  });
+  // Parrot beak
+  const beak=new THREE.Mesh(new THREE.ConeGeometry(0.17,0.52,5),new THREE.MeshPhongMaterial({color:0xd0b020,shininess:30}));
+  beak.rotation.x=Math.PI*0.55; beak.position.set(0,1.90,0.76); g.add(beak);
+  // Dome bumps
+  for(let i=0;i<8;i++){
+    const a=(i/8)*Math.PI*2;
+    const bump=new THREE.Mesh(new THREE.SphereGeometry(0.10,6,5),dm);
+    bump.position.set(Math.cos(a)*0.72,2.42+Math.sin(a)*0.28,0.30); g.add(bump);
+  }
+  // 6 tentacles
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI*2; const t=new THREE.Group();
+    const tb=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.18,1.10,7),m); tb.rotation.z=Math.cos(a)*0.55; tb.rotation.x=Math.sin(a)*0.55; t.add(tb);
+    const tm=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.11,0.96,6),m);
+    tm.position.set(Math.cos(a)*0.80,-0.64,Math.sin(a)*0.80); tm.rotation.z=Math.cos(a)*0.90; tm.rotation.x=Math.sin(a)*0.90; t.add(tm);
+    const tt=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.52,5),dm);
+    tt.position.set(Math.cos(a)*1.60,-1.14,Math.sin(a)*1.62); tt.rotation.z=Math.cos(a)*1.1; tt.rotation.x=Math.sin(a)*1.1; t.add(tt);
+    for(let s=0;s<3;s++){const sk=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.04,6),sucM); sk.position.set(Math.cos(a)*(0.24+s*0.30),-0.14-s*0.38,Math.sin(a)*(0.24+s*0.30)); t.add(sk);}
+    t.position.y=1.20; g.add(t);
+  }
+  const gl=new THREE.Mesh(new THREE.SphereGeometry(1.38,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.10,side:THREE.BackSide}));
+  gl.position.y=2.12; g.add(gl); return g;
+}
+
+// Boss 6 — Star Destroyer: geometric cosmic entity
+function makeBossCosmic(bDef) {
+  const g=new THREE.Group();
+  const col=new THREE.Color(bDef.color);
+  const gm=new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:0.50,shininess:80,specular:col.clone()});
+  const cm=new THREE.MeshBasicMaterial({color:col});
+  // Core octahedron
+  const core=new THREE.Mesh(new THREE.OctahedronGeometry(0.88,0),gm); core.position.y=2.0; g.add(core);
+  // Outer shell
+  const shell=new THREE.Mesh(new THREE.IcosahedronGeometry(1.18,0),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.18,side:THREE.BackSide}));
+  shell.position.y=2.0; g.add(shell);
+  const wire=new THREE.Mesh(new THREE.IcosahedronGeometry(1.20,0),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.28,wireframe:true}));
+  wire.position.y=2.0; g.add(wire);
+  // Bright inner spark
+  const inner=new THREE.Mesh(new THREE.SphereGeometry(0.40,10,8),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.92}));
+  inner.position.y=2.0; g.add(inner);
+  // Glowing red eyes
+  const em=new THREE.MeshBasicMaterial({color:0xff0000});
+  [-0.24,0.24].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.12,7,7),em); e.position.set(x,2.18,0.82); g.add(e); const eg=new THREE.Mesh(new THREE.SphereGeometry(0.20,6,6),new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.22})); eg.position.set(x,2.18,0.82); g.add(eg); });
+  // 3 orbital rings
+  [0,1,2].forEach(i=>{ const ring=new THREE.Mesh(new THREE.TorusGeometry(1.38+i*0.18,0.055,6,32),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.58-i*0.14})); ring.rotation.x=i*0.62; ring.rotation.z=i*0.46; ring.position.y=2.0; g.add(ring); });
+  // 4 weapon arms + tips
+  [0,1,2,3].forEach(i=>{
+    const a=(i/4)*Math.PI*2+Math.PI/8;
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.05,1.32,6),gm); arm.rotation.z=Math.cos(a)*0.70; arm.rotation.x=Math.sin(a)*0.70; arm.position.y=2.0; g.add(arm);
+    const tip=new THREE.Mesh(new THREE.OctahedronGeometry(0.16,0),cm); tip.position.set(Math.cos(a)*0.88,2.0+Math.sin(a)*0.40,Math.sin(a)*0.88); g.add(tip);
+  });
+  // Energy orbs
+  for(let i=0;i<12;i++){ const a=(i/12)*Math.PI*2; const orb=new THREE.Mesh(new THREE.SphereGeometry(0.06,5,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.72})); orb.position.set(Math.cos(a)*1.10,2.0+Math.sin(a)*0.36,Math.sin(a)*0.62); g.add(orb); }
+  const bigGl=new THREE.Mesh(new THREE.SphereGeometry(1.85,10,8),new THREE.MeshBasicMaterial({color:bDef.color,transparent:true,opacity:0.08,side:THREE.BackSide}));
+  bigGl.position.y=2.0; g.add(bigGl); return g;
+}
+
+// Dispatch to correct boss builder by index
+function makeBossMesh(bDef, bIdx) {
+  switch(bIdx) {
+    case 0: return makeBossGorilla(bDef);
+    case 1: return makeBossCroc(bDef);
+    case 2: return makeBossRhino(bDef);
+    case 3: return makeBossEagle(bDef);
+    case 4: return makeBossDragon(bDef);
+    case 5: return makeBossKraken(bDef);
+    case 6: return makeBossCosmic(bDef);
+    default: return makeBossGorilla(bDef);
+  }
+}
+
+function spawnBoss() {
+  if(bossIdx>=BOSSES.length){ nextBossDist=distance+BOSS_TRIGGER*2; phase='running'; return; }
+  const bDef = BOSSES[bossIdx];
+  const mesh = makeBossMesh(bDef, bossIdx);
+  const sc   = 1.25+bossIdx*0.07;
+  mesh.scale.setScalar(sc);
+  mesh.position.set(16,0,0);
+  mesh.rotation.y=-Math.PI/2; // face left toward monkey
+  scene.add(mesh);
+
+  bossData = {
+    mesh, hp:bDef.hpMax, maxHp:bDef.hpMax,
+    x:16, atk:bDef.atk, name:bDef.name,
+    reward:bDef.reward, color:bDef.color, sc,
+    atkCd:bDef.atkCd, atkTimer:bDef.atkCd+1.5,
+    charging:false, chargeDir:-1,
+  };
+
+  document.getElementById('boss-section').style.display='block';
+  document.getElementById('boss-label').textContent=bDef.name;
+  updateBossBar();
+  phase='boss_fight';
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOSS DEFEATED
+// ═══════════════════════════════════════════════════════════
+function bossDefeated() {
+  phase='boss_dead';
+  const reward = bossData.reward;
+  const mesh   = bossData.mesh;
+  const sc     = bossData.sc;
+  bananas += reward;
+  updateBananas();
+  document.getElementById('boss-section').style.display='none';
+  showMsg('BOSS DEFEATED!','+'+reward+' 🍌 BANANAS!',2.5);
+
+  // Explode animation
+  let t=0;
+  const ex=setInterval(()=>{
+    t+=0.06;
+    mesh.scale.setScalar(sc*(1+t*3));
+    mesh.children.forEach(c=>{ if(c.material) c.material.opacity=Math.max(0,1-t*2.5); });
+    if(t>0.55){ clearInterval(ex); scene.remove(mesh); }
+  },50);
+
+  const nextFIdx = formIdx+1;
+  bossData=null;
+
+  setTimeout(()=>{
+    if(nextFIdx<FORMS.length){
+      phase='transforming';
+      showMsg('EVOLUTION!',FORMS[nextFIdx].name+'!',3.2);
+      let fl=0;
+      const fi=setInterval(()=>{
+        fl++;
+        const hue=(fl*0.08)%1;
+        charMeshes.forEach(m=>{ if(m.material&&m.material.color) m.material.color.setHSL(hue,1,0.55); });
+        if(fl>=18){
+          clearInterval(fi);
+          formIdx=nextFIdx;
+          bossIdx=Math.min(bossIdx+1,BOSSES.length-1);
+          applyForm(formIdx);
+          nextBossDist=distance+BOSS_TRIGGER;
+          setTimeout(()=>{ hideMsg(); phase='running'; },900);
+        }
+      },85);
+    } else {
+      bossIdx=Math.min(bossIdx+1,BOSSES.length-1);
+      nextBossDist=distance+BOSS_TRIGGER*1.5;
+      phase='running';
+    }
+  },2800);
+}
+
+// ═══════════════════════════════════════════════════════════
+// FOOT DUST
+// ═══════════════════════════════════════════════════════════
+function spawnDust() {
+  for(let i=0;i<4;i++){
+    const d=new THREE.Mesh(
+      new THREE.SphereGeometry(0.06+Math.random()*0.08,4,3),
+      new THREE.MeshBasicMaterial({color:0xaa8855,transparent:true,opacity:0.55})
+    );
+    d.position.set(MONKEY_X+(Math.random()-0.5)*0.5,0.06+Math.random()*0.10,(Math.random()-0.5)*0.4);
+    scene.add(d);
+    dustParts.push({mesh:d, vx:(-1.5-Math.random()*2.5), vy:0.8+Math.random()*1.0, life:0.38});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// WEAPON SYSTEM
+// ═══════════════════════════════════════════════════════════
+function fireWeapon() {
+  if(weaponCd>0||(phase!=='running'&&phase!=='boss_fight')) return;
+  const tier = weaponTier();
+  weaponCd = WEAPON_CDS[tier];
+  updateWeaponUI();
+
+  let mesh, dmg, spd, projVY=0, col;
+  if(tier===0){
+    // Banana throw - arc
+    const g=new THREE.Group();
+    const bm=new THREE.Mesh(new THREE.SphereGeometry(0.26,8,8),
+      new THREE.MeshPhongMaterial({color:0xffe030,emissive:0xcc7700,emissiveIntensity:0.7,shininess:60}));
+    bm.scale.set(1.4,0.65,0.65); g.add(bm);
+    mesh=g; dmg=3; spd=16; projVY=7; col=0xffee00;
+  } else if(tier===1){
+    // RPG rocket
+    const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.13,0.75,7),
+      new THREE.MeshPhongMaterial({color:0x707070,shininess:40}));
+    body.rotation.z=Math.PI/2; g.add(body);
+    const nose=new THREE.Mesh(new THREE.ConeGeometry(0.13,0.28,7),
+      new THREE.MeshPhongMaterial({color:0xcc3010}));
+    nose.rotation.z=Math.PI/2; nose.position.x=0.52; g.add(nose);
+    const fire=new THREE.Mesh(new THREE.ConeGeometry(0.18,0.45,7),
+      new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.92}));
+    fire.rotation.z=-Math.PI/2; fire.position.x=-0.62; g.add(fire);
+    mesh=g; dmg=10; spd=26; col=0xff8800;
+  } else {
+    // Cosmic blast - glowing orb
+    const g=new THREE.Group();
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(0.38,10,10),
+      new THREE.MeshBasicMaterial({color:0x40ffff}));
+    g.add(orb);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.60,8,8),
+      new THREE.MeshBasicMaterial({color:0x40ffff,transparent:true,opacity:0.22,side:THREE.BackSide}));
+    g.add(glow);
+    mesh=g; dmg=25; spd=32; col=0x40ffff;
+  }
+
+  mesh.position.set(MONKEY_X+1.0, monkeyY+1.9, 0);
+  scene.add(mesh);
+  projectiles.push({mesh, x:MONKEY_X+1.0, y:monkeyY+1.9, vx:spd, vy:projVY, dmg, col, tier});
+  camShake=0.08;
+}
+
+function createExplosion(x, y, col, sz=1) {
+  for(let i=0;i<8;i++){
+    const part=new THREE.Mesh(
+      new THREE.SphereGeometry((0.12+Math.random()*0.18)*sz,5,5),
+      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:1.0})
+    );
+    part.position.set(x,y,(Math.random()-0.5)*0.4);
+    scene.add(part);
+    const ang=(i/8)*Math.PI*2;
+    exParts.push({mesh:part, vx:Math.cos(ang)*4*sz, vy:Math.sin(ang)*4*sz+2, life:0.55});
+  }
+  // Flash sphere
+  const flash=new THREE.Mesh(new THREE.SphereGeometry(0.55*sz,8,8),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.85}));
+  flash.position.set(x,y,0); scene.add(flash);
+  exParts.push({mesh:flash, vx:0, vy:0, life:0.12, flash:true});
+}
+
+function updateWeaponUI() {
+  const tier=weaponTier();
+  document.getElementById('fire-icon').textContent=WEAPON_EMOJIS[tier];
+  document.getElementById('weapon-name').textContent=WEAPON_NAMES[tier];
+  const cd=weaponCd;
+  const btn=document.getElementById('fire-btn');
+  if(cd>0){
+    document.getElementById('fire-cd').textContent=cd.toFixed(1)+'s';
+    btn.style.opacity='0.5';
+  } else {
+    document.getElementById('fire-cd').textContent='READY';
+    btn.style.opacity='1';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// RESTART
+// ═══════════════════════════════════════════════════════════
+function restartGame() {
+  activeObjs.forEach(o=>scene.remove(o.mesh));
+  activeObjs.length=0;
+  if(bossData){ scene.remove(bossData.mesh); bossData=null; }
+  formIdx=0; bananas=0; distance=0;
+  monkeyHP=FORMS[0].hpMax; monkeyMaxHP=FORMS[0].hpMax;
+  monkeyY=0; monkeyVY=0; isGrounded=true;
+  bossIdx=0; nextBossDist=BOSS_TRIGGER;
+  spawnTimer=0; nextSpawn=1.8; runCycle=0;
+  punchTimer=0; iTimer=0; camShake=0;
+  // Clear projectiles, explosions, dust
+  projectiles.forEach(p=>scene.remove(p.mesh)); projectiles.length=0;
+  exParts.forEach(e=>scene.remove(e.mesh)); exParts.length=0;
+  dustParts.forEach(d=>scene.remove(d.mesh)); dustParts.length=0;
+  weaponCd=0; lastDustStep=0;
+  phase='running';
+  applyForm(0); updateBananas(); updateWeaponUI();
+  document.getElementById('boss-section').style.display='none';
+  document.getElementById('distance-label').textContent='0 m';
+  hideMsg();
+}
+
+// ═══════════════════════════════════════════════════════════
+// COLLISION
+// ═══════════════════════════════════════════════════════════
+function collides(obj) {
+  const mx0=MONKEY_X-0.52, mx1=MONKEY_X+0.52;
+  const my0=monkeyY,       my1=monkeyY+2.10;
+  const ox=obj.mesh.position.x;
+  const ox0=ox-obj.hbox.w, ox1=ox+obj.hbox.w;
+  const oy0=obj.hbox.y,    oy1=obj.hbox.y+obj.hbox.h;
+  return mx0<ox1 && mx1>ox0 && my0<oy1 && my1>oy0;
+}
+
+// ═══════════════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════════════
+function handleInput(e) {
+  // Ignore if the fire button was the target
+  if(e&&e.target&&e.target.closest&&e.target.closest('#fire-btn')) return;
+  if(phase==='start'){
+    document.getElementById('start-screen').style.display='none';
+    phase='running'; return;
+  }
+  if(phase==='game_over'){ restartGame(); return; }
+  if(phase==='running'||phase==='boss_fight'){
+    if(isGrounded){ monkeyVY=JUMP_VEL*FORMS[formIdx].jmp; isGrounded=false; }
+    if(phase==='boss_fight'&&bossData&&!bossData.charging) playerAttack();
+  }
+}
+document.addEventListener('pointerdown', handleInput);
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); handleInput(e); }
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyF'){ e.preventDefault(); fireWeapon(); }
+});
+document.getElementById('fire-btn').addEventListener('pointerdown',e=>{
+  e.stopPropagation(); fireWeapon();
+});
+
+function playerAttack() {
+  const atk=FORMS[formIdx].atk;
+  bossData.hp-=atk;
+  updateBossBar();
+  punchTimer=0.20; punchGroup.visible=true;
+  punchMat.color.set(FORMS[formIdx].color);
+  camShake=0.18;
+  bossData.mesh.children.forEach(c=>{
+    if(c.material&&c.material.emissive!==undefined){
+      c.material.emissive.set(0xffffff);
+      c.material.emissiveIntensity=0.6;
+      setTimeout(()=>{ if(c.material) c.material.emissiveIntensity=0; },110);
+    }
+  });
+  if(bossData.hp<=0) bossDefeated();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════════════════════════
+let prevT = performance.now();
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((now-prevT)/1000, 0.05);
+  prevT = now;
+
+  // Aura always spins
+  auraGroup.children.forEach((r,i)=>{ r.rotation.y+=dt*(0.9+i*0.55); r.rotation.z+=dt*0.35; });
+  // Cosmic form — orbital ring spins
+  if(formIdx>=6) extrasGroup.rotation.y+=dt*1.5;
+  // Star Destroyer boss — core spins
+  if(phase==='boss_fight'&&bossData&&bossIdx===6) bossData.mesh.rotation.y-=dt*0.55;
+
+  if(phase==='start'){
+    runCycle+=dt;
+    monkeyGroup.position.y=Math.sin(runCycle*1.8)*0.06;
+    monkeyGroup.rotation.y=Math.PI/2+Math.sin(runCycle*0.5)*0.08;
+    renderer.render(scene,camera); return;
+  }
+  if(phase==='game_over'){ renderer.render(scene,camera); return; }
+
+  const spd = BASE_SPEED * FORMS[formIdx].spd;
+
+  // Ground scroll
+  if(phase==='running'){
+    distance+=spd*dt;
+    const rem=Math.max(0,Math.floor(nextBossDist-distance));
+    document.getElementById('distance-label').textContent=
+      Math.floor(distance)+'m  |  Boss in: '+rem+'m';
+    const dx=spd*dt;
+    groundTiles.forEach(t=>{ t.position.x-=dx; if(t.position.x<-32) t.position.x+=64; });
+    dirtTiles.forEach(t=>{  t.position.x-=dx; if(t.position.x<-32) t.position.x+=64; });
+    // Parallax layers — each at its own depth speed
+    paraItems.forEach(p=>{ p.mesh.position.x-=spd*p.factor*dt; if(p.mesh.position.x<p.lb) p.mesh.position.x=p.rb; });
+  } else if(phase==='boss_fight'){
+    const dx=spd*0.12*dt; // slow scroll during fight
+    groundTiles.forEach(t=>{ t.position.x-=dx; if(t.position.x<-32) t.position.x+=64; });
+    dirtTiles.forEach(t=>{  t.position.x-=dx; if(t.position.x<-32) t.position.x+=64; });
+    paraItems.forEach(p=>{ p.mesh.position.x-=spd*0.12*p.factor*dt; if(p.mesh.position.x<p.lb) p.mesh.position.x=p.rb; });
+  }
+
+  // Physics
+  if(!isGrounded){
+    monkeyVY+=GRAVITY*dt; monkeyY+=monkeyVY*dt;
+    if(monkeyY<=0){ monkeyY=0; monkeyVY=0; isGrounded=true; }
+  }
+  monkeyGroup.position.y=monkeyY;
+
+  // Running animation
+  if(phase==='running'&&isGrounded){
+    runCycle+=dt*spd*0.60;
+    const sw=Math.sin(runCycle);
+    // Arms — exaggerated running swing with Z flare
+    mLArm.rotation.x= sw*1.22; mRArm.rotation.x=-sw*1.22;
+    mLArm.rotation.z= 0.28+Math.abs(sw)*0.07; mRArm.rotation.z=-(0.28+Math.abs(sw)*0.07);
+    // Legs — powerful stride
+    mLLeg.rotation.x=-sw*1.42; mRLeg.rotation.x= sw*1.42;
+    // Foot tuck on back-swing
+    mFootL.rotation.x=(-sw>0.18)?(-sw*0.50):0;
+    mFootR.rotation.x=( sw>0.18)?( sw*0.50):0;
+    // Body parts stay at base (bounce on whole group)
+    mBody.position.y=1.70; mHead.position.y=2.65; mBrow.position.y=2.84;
+    // Body side sway
+    mBody.rotation.z=Math.sin(runCycle+1.0)*0.07;
+    // Whole-group bounce — looks way more natural
+    monkeyGroup.position.y = monkeyY + Math.abs(sw)*0.13;
+    monkeyGroup.rotation.x=-0.10; monkeyGroup.rotation.y=Math.PI/2;
+    // Foot dust on each footfall
+    const step=Math.floor(runCycle/Math.PI);
+    if(step>lastDustStep){ lastDustStep=step; spawnDust(); }
+  } else if(!isGrounded){
+    const up = monkeyVY>0;
+    mLArm.rotation.x= up?-0.95:-0.22; mRArm.rotation.x= up?-0.95:-0.22;
+    mLArm.rotation.z= 0.82; mRArm.rotation.z=-0.82;
+    mLLeg.rotation.x= up? 0.62:-0.12; mRLeg.rotation.x= up? 0.62:-0.12;
+    mFootL.rotation.x=0; mFootR.rotation.x=0; mBody.rotation.z=0;
+    mBody.position.y=1.70; mHead.position.y=2.65; mBrow.position.y=2.84;
+    monkeyGroup.position.y = monkeyY;
+    monkeyGroup.rotation.x= up?0.10:-0.04; monkeyGroup.rotation.y=Math.PI/2;
+  } else if(phase==='boss_fight'&&isGrounded){
+    runCycle+=dt*4;
+    monkeyGroup.position.y=monkeyY+Math.sin(runCycle)*0.03;
+    mLArm.rotation.x=-0.25; mRArm.rotation.x=-0.25;
+    mLArm.rotation.z= 0.45; mRArm.rotation.z=-0.45;
+    mLLeg.rotation.x= 0.08; mRLeg.rotation.x= 0.08;
+    mFootL.rotation.x=0; mFootR.rotation.x=0; mBody.rotation.z=0;
+    mBody.position.y=1.70; mHead.position.y=2.65; mBrow.position.y=2.84;
+    monkeyGroup.rotation.x=0.04; monkeyGroup.rotation.y=Math.PI/2+0.05;
+  }
+
+  if(punchTimer>0){ punchTimer-=dt; if(punchTimer<=0) punchGroup.visible=false; }
+
+  // Weapon cooldown tick
+  if(weaponCd>0){ weaponCd=Math.max(0,weaponCd-dt); updateWeaponUI(); }
+
+  // Update projectiles
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p=projectiles[i];
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    if(p.tier===0) p.vy+=GRAVITY*0.55*dt; // banana arc
+    if(p.tier===2){ p.mesh.rotation.y+=dt*8; } // cosmic spin
+    p.mesh.position.set(p.x, p.y, 0);
+
+    let hit=false;
+    // Hit obstacles
+    if(phase==='running'){
+      for(let j=activeObjs.length-1;j>=0;j--){
+        const obj=activeObjs[j];
+        if(Math.abs(obj.mesh.position.x-p.x)<0.9&&Math.abs(p.y-0.7)<1.2){
+          createExplosion(p.x,p.y,p.col,p.tier===1?1.6:1.0);
+          scene.remove(obj.mesh); activeObjs.splice(j,1);
+          if(p.tier!==2){ hit=true; break; } // cosmic pierces all
+        }
+      }
+    }
+    // Hit boss
+    if(!hit&&phase==='boss_fight'&&bossData){
+      if(Math.abs(bossData.x-p.x)<1.8&&p.y>0&&p.y<4.0){
+        bossData.hp-=p.dmg; updateBossBar(); camShake=0.28;
+        createExplosion(bossData.x,p.y,p.col,p.tier===1?1.8:1.0);
+        bossData.mesh.children.forEach(c=>{
+          if(c.material&&c.material.emissive!==undefined){
+            c.material.emissive.set(0xffffff); c.material.emissiveIntensity=0.8;
+            setTimeout(()=>{ if(c.material) c.material.emissiveIntensity=0; },130);
+          }
+        });
+        hit=true;
+        if(bossData.hp<=0) bossDefeated();
+      }
+    }
+    if(hit||p.x>SPAWN_X+2||p.y<-1.5){ scene.remove(p.mesh); projectiles.splice(i,1); }
+  }
+
+  // Foot dust particles
+  for(let i=dustParts.length-1;i>=0;i--){
+    const d=dustParts[i];
+    d.life-=dt; d.vy+=GRAVITY*0.16*dt;
+    d.mesh.position.x+=d.vx*dt; d.mesh.position.y+=d.vy*dt;
+    d.mesh.material.opacity=Math.max(0,(d.life/0.38)*0.55);
+    if(d.life<=0){scene.remove(d.mesh);dustParts.splice(i,1);}
+  }
+
+  // Update explosion particles
+  for(let i=exParts.length-1;i>=0;i--){
+    const ep=exParts[i];
+    ep.life-=dt;
+    if(!ep.flash){ ep.vy+=GRAVITY*0.25*dt; ep.mesh.position.x+=ep.vx*dt; ep.mesh.position.y+=ep.vy*dt; }
+    ep.mesh.material.opacity=Math.max(0,ep.life/(ep.flash?0.12:0.55));
+    if(ep.life<=0){ scene.remove(ep.mesh); exParts.splice(i,1); }
+  }
+
+  if(iTimer>0){
+    iTimer-=dt; flashPhase+=dt;
+    monkeyGroup.visible=Math.sin(flashPhase*22)>0;
+    if(iTimer<=0) monkeyGroup.visible=true;
+  }
+
+  if(camShake>0){
+    camShake-=dt;
+    camera.position.x=(Math.random()-0.5)*0.15;
+    camera.position.y=4.2+(Math.random()-0.5)*0.10;
+  } else {
+    camera.position.x=0;
+    // Subtle camera bob synced to running stride
+    camera.position.y=(phase==='running'&&isGrounded)
+      ? 4.2+Math.sin(runCycle*2)*0.038
+      : 4.2;
+  }
+
+  // ── RUNNING ──
+  if(phase==='running'){
+    spawnTimer+=dt;
+    if(spawnTimer>=nextSpawn){ spawnTimer=0; nextSpawn=1.1+Math.random()*1.6; spawnObject(); }
+
+    const dx=spd*dt;
+    for(let i=activeObjs.length-1;i>=0;i--){
+      const obj=activeObjs[i];
+      obj.mesh.position.x-=dx;
+      if(obj.type==='banana'||obj.type==='banana_bunch') obj.mesh.rotation.y+=dt*2.8;
+
+      if(collides(obj)){
+        if(obj.type==='banana'){
+          bananas+=1; updateBananas();
+          scene.remove(obj.mesh); activeObjs.splice(i,1);
+        } else if(obj.type==='banana_bunch'){
+          bananas+=5; updateBananas();
+          scene.remove(obj.mesh); activeObjs.splice(i,1);
+        } else if(iTimer<=0){
+          monkeyHP--; iTimer=1.4; flashPhase=0;
+          camShake=0.22; updateHPBar();
+          scene.remove(obj.mesh); activeObjs.splice(i,1);
+          if(monkeyHP<=0){ phase='game_over'; showMsg('KNOCKED OUT!','Tap to try again',99); }
+        }
+      } else if(obj.mesh.position.x<DESPAWN_X){
+        scene.remove(obj.mesh); activeObjs.splice(i,1);
+      }
+    }
+
+    // Boss trigger
+    if(distance>=nextBossDist&&bossIdx<BOSSES.length){
+      activeObjs.forEach(o=>scene.remove(o.mesh)); activeObjs.length=0;
+      showMsg('BOSS INCOMING!',BOSSES[bossIdx].name,1.8);
+      phase='boss_fight';
+      setTimeout(()=>spawnBoss(),1800);
+    }
+    if(bossIdx>=BOSSES.length&&distance>=nextBossDist){
+      nextBossDist=distance+BOSS_TRIGGER*2;
+    }
+  }
+
+  // ── BOSS FIGHT ──
+  if(phase==='boss_fight'&&bossData){
+    // Slide boss in from right
+    if(bossData.x>BOSS_X){
+      bossData.x-=dt*9;
+      if(bossData.x<BOSS_X) bossData.x=BOSS_X;
+      bossData.mesh.position.x=bossData.x;
+      bossData.mesh.rotation.z=Math.sin(now/120)*0.06; // run wobble
+    }
+
+    if(bossData.x<=BOSS_X){
+      if(!bossData.charging){
+        bossData.mesh.position.y=Math.sin(now/520)*0.08;
+        bossData.mesh.rotation.z=Math.sin(now/800)*0.05;
+        bossData.atkTimer-=dt;
+        if(bossData.atkTimer<=0){
+          bossData.charging=true; bossData.chargeDir=-1;
+          showMsg('DODGE!','',0.6);
+        }
+      }
+
+      if(bossData.charging){
+        bossData.x+=bossData.chargeDir*dt*15;
+        bossData.mesh.position.x=bossData.x;
+        bossData.mesh.position.y=0;
+
+        if(bossData.x<=MONKEY_X+1.3&&bossData.chargeDir===-1&&iTimer<=0){
+          if(monkeyY<1.0){
+            monkeyHP-=bossData.atk; iTimer=0.9; flashPhase=0;
+            camShake=0.25; updateHPBar();
+            if(monkeyHP<=0){ phase='game_over'; showMsg('KNOCKED OUT!','Tap to try again',99); }
+          }
+          bossData.chargeDir=1;
+        }
+        if(bossData.x>=BOSS_X+0.05&&bossData.chargeDir===1){
+          bossData.x=BOSS_X; bossData.mesh.position.x=BOSS_X;
+          bossData.charging=false; bossData.atkTimer=bossData.atkCd;
+        }
+      }
+    }
+  }
+
+  renderer.render(scene,camera);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+// Build start screen form pips
+const fCont = document.getElementById('start-forms');
+FORM_COLORS.forEach(c=>{
+  const pip=document.createElement('div');
+  pip.className='form-pip';
+  pip.style.background='#'+c.toString(16).padStart(6,'0');
+  fCont.appendChild(pip);
+});
+
+applyForm(0);
+updateBananas();
+updateWeaponUI();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
